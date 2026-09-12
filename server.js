@@ -4,6 +4,7 @@ const path = require('path');
 const axios = require('axios');
 const torrentStream = require('torrent-stream');
 const crypto = require('crypto');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -300,6 +301,114 @@ function getContentType(filename) {
     };
     return types[ext] || 'application/octet-stream';
 }
+
+function getFolderSizeBytes(folderPath) {
+    let total = 0;
+    if (!fs.existsSync(folderPath)) return 0;
+    try {
+        const stats = fs.statSync(folderPath);
+        if (!stats.isDirectory()) return stats.size;
+        const entries = fs.readdirSync(folderPath, { withFileTypes: true });
+        for (const entry of entries) {
+            const full = path.join(folderPath, entry.name);
+            if (entry.isDirectory()) {
+                total += getFolderSizeBytes(full);
+            } else if (entry.isFile()) {
+                total += fs.statSync(full).size;
+            }
+        }
+    } catch (e) {}
+    return total;
+}
+
+// Get downloaded files and storage stats on VPS
+app.get('/api/downloads', (req, res) => {
+    const downloadsDir = path.join(__dirname, 'downloads');
+    if (!fs.existsSync(downloadsDir)) {
+        fs.mkdirSync(downloadsDir, { recursive: true });
+    }
+
+    try {
+        const entries = fs.readdirSync(downloadsDir, { withFileTypes: true });
+        const files = entries.map(entry => {
+            const fullPath = path.join(downloadsDir, entry.name);
+            let sizeBytes = 0;
+            let modifiedAt = null;
+            try {
+                const stat = fs.statSync(fullPath);
+                modifiedAt = stat.mtime;
+                sizeBytes = entry.isDirectory() ? getFolderSizeBytes(fullPath) : stat.size;
+            } catch (e) {}
+
+            return {
+                name: entry.name,
+                isDir: entry.isDirectory(),
+                sizeBytes,
+                modifiedAt
+            };
+        });
+
+        const totalSizeBytes = getFolderSizeBytes(downloadsDir);
+        res.json({
+            totalSizeBytes,
+            files
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to read downloads directory: ' + err.message });
+    }
+});
+
+// Clean downloaded files on VPS (clean all or clean specific file/folder)
+app.post('/api/downloads/clean', (req, res) => {
+    const { name } = req.body || {};
+    const downloadsDir = path.join(__dirname, 'downloads');
+
+    if (!fs.existsSync(downloadsDir)) {
+        return res.json({ success: true, message: 'Downloads directory is already empty.' });
+    }
+
+    try {
+        if (name) {
+            const safeName = path.basename(name);
+            const targetPath = path.join(downloadsDir, safeName);
+
+            // Destroy active torrent session holding this file
+            for (const [hash, item] of activeTorrents.entries()) {
+                if (item.name === safeName || (item.engine && item.engine.torrent && item.engine.torrent.name === safeName)) {
+                    try { if (item.engine) item.engine.destroy(); } catch (e) {}
+                    activeTorrents.delete(hash);
+                }
+            }
+
+            if (fs.existsSync(targetPath)) {
+                fs.rmSync(targetPath, { recursive: true, force: true });
+                return res.json({ success: true, message: `Deleted ${safeName} from VPS.` });
+            } else {
+                return res.status(404).json({ error: 'File or folder not found on VPS.' });
+            }
+        }
+
+        // Clean all files in downloads
+        for (const [hash, item] of activeTorrents.entries()) {
+            try { if (item.engine) item.engine.destroy(); } catch (e) {}
+        }
+        activeTorrents.clear();
+
+        const entries = fs.readdirSync(downloadsDir);
+        for (const entry of entries) {
+            const fullPath = path.join(downloadsDir, entry);
+            try {
+                fs.rmSync(fullPath, { recursive: true, force: true });
+            } catch (err) {
+                console.error(`Error deleting ${fullPath}:`, err.message);
+            }
+        }
+
+        return res.json({ success: true, message: 'All downloaded files cleaned from VPS.' });
+    } catch (err) {
+        return res.status(500).json({ error: 'Failed to clean downloaded files: ' + err.message });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Torrent-to-Direct server listening at http://localhost:${PORT}`);

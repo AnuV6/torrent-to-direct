@@ -37,8 +37,11 @@
 
             <div id="torrentDetails" class="details-card hidden">
                 <div class="torrent-header">
-                    <h2 id="torrentTitle">Movie Title</h2>
-                    <span id="torrentSize" class="size-badge">0 MB</span>
+                    <div>
+                        <h2 id="torrentTitle">Movie Title</h2>
+                        <span id="torrentSize" class="size-badge">0 MB</span>
+                    </div>
+                    <button id="cleanCurrentBtn" class="btn-danger-outline" onclick="cleanCurrentTorrent()">Delete from VPS</button>
                 </div>
 
                 <div class="status-bar">
@@ -62,6 +65,21 @@
 
                 <h3>Available Files for Direct Download / Stream</h3>
                 <div id="fileList" class="file-list"></div>
+            </div>
+
+            <div class="storage-card">
+                <div class="storage-header">
+                    <div class="storage-info">
+                        <h3>VPS Downloaded Files</h3>
+                        <p class="storage-subtext">Manage files stored on server disk</p>
+                    </div>
+                    <div class="storage-actions">
+                        <span id="storageUsedBadge" class="size-badge">0 Bytes Used</span>
+                        <button id="refreshStorageBtn" class="btn-secondary" onclick="loadVpsStorage()">Refresh</button>
+                        <button id="cleanAllBtn" class="btn-danger" onclick="cleanAllDownloads()">Clean All Files</button>
+                    </div>
+                </div>
+                <div id="vpsFileList" class="vps-file-list"></div>
             </div>
         </main>
     </div>
