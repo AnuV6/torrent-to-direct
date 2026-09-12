@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Torrent to Direct Link Converter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background-glow"></div>
+    <div class="container">
+        <header>
+            <div class="badge">Fast & Direct</div>
+            <h1>Torrent to Direct Link Converter</h1>
+            <p>Convert YTS torrent downloads, magnet links & torrent URLs into instant HTTP direct download & stream links.</p>
+        </header>
+
+        <main>
+            <div class="input-card">
+                <div class="input-group">
+                    <input type="text" id="torrentUrl" placeholder="Paste YTS Torrent Link, Magnet URI, or Torrent File URL..." autocomplete="off">
+                    <button id="convertBtn" onclick="convertTorrent()">
+                        <span id="btnText">Convert Link</span>
+                        <div id="btnSpinner" class="spinner hidden"></div>
+                    </button>
+                </div>
+                <div class="examples">
+                    <span>Supports:</span>
+                    <span class="tag">YTS Torrent (.torrent)</span>
+                    <span class="tag">YTS Movie Page</span>
+                    <span class="tag">Magnet Links</span>
+                </div>
+            </div>
+
+            <div id="errorMessage" class="error-card hidden"></div>
+
+            <div id="torrentDetails" class="details-card hidden">
+                <div class="torrent-header">
+                    <h2 id="torrentTitle">Movie Title</h2>
+                    <span id="torrentSize" class="size-badge">0 MB</span>
+                </div>
+
+                <div class="status-bar">
+                    <div class="stat-item">
+                        <span class="stat-label">Progress</span>
+                        <span id="progressText" class="stat-value">0%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Download Speed</span>
+                        <span id="speedText" class="stat-value">0 KB/s</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Active Peers</span>
+                        <span id="peersText" class="stat-value">0</span>
+                    </div>
+                </div>
+
+                <div class="progress-container">
+                    <div id="progressBar" class="progress-fill" style="width: 0%;"></div>
+                </div>
+
+                <h3>Available Files for Direct Download / Stream</h3>
+                <div id="fileList" class="file-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
