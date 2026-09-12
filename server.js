@@ -16,30 +16,41 @@ const activeTorrents = new Map();
 
 // Optimized high-speed YTS & global tracker list
 const YTS_TRACKERS = [
-    'udp://open.demonii.com:1337/announce',
-    'udp://tracker.openbittorrent.com:80',
-    'udp://tracker.coppersurfer.tk:6969',
-    'udp://glotorrents.pw:6969/announce',
     'udp://tracker.opentrackr.org:1337/announce',
-    'udp://p4p.arenabg.com:1337',
-    'udp://tracker.leechers-paradise.org:6969',
-    'udp://tracker.cyberia.is:6969/announce',
-    'udp://tracker.port443.xyz:6969/announce',
     'udp://open.stealth.si:80/announce',
     'udp://tracker.torrent.eu.org:451/announce',
     'udp://explodie.org:6969/announce',
-    'udp://ipv4.tracker.harry.lu:80/announce',
-    'udp://tracker.tiny-vps.com:6969/announce',
-    'udp://thetracker.org:80/announce',
-    'udp://open.acgnxtracker.com:80/announce'
+    'udp://tracker.moeking.me:6969/announce',
+    'udp://opentracker.i2p.rocks:6969/announce',
+    'udp://tracker.dler.org:6969/announce',
+    'udp://tracker.openbittorrent.com:6969/announce',
+    'udp://tracker.openbittorrent.com:80/announce',
+    'udp://exodus.desync.com:6969/announce',
+    'udp://tracker.bitsearch.to:1337/announce',
+    'udp://movies.zsw.ca:6969/announce',
+    'udp://p4p.arenabg.com:1337/announce',
+    'udp://retracker.lanta-net.ru:2710/announce',
+    'udp://open.demonii.com:1337/announce',
+    'http://tracker.openbittorrent.com:80/announce'
 ];
+
+function appendTrackersToMagnet(magnetUrl) {
+    if (!magnetUrl.startsWith('magnet:?')) return magnetUrl;
+    let enriched = magnetUrl;
+    for (const tr of YTS_TRACKERS) {
+        if (!enriched.includes(encodeURIComponent(tr)) && !enriched.includes(tr)) {
+            enriched += `&tr=${encodeURIComponent(tr)}`;
+        }
+    }
+    return enriched;
+}
 
 // Helper to resolve YTS links to torrent/magnet
 async function resolveTorrentSource(inputUrl) {
     let trimmed = inputUrl.trim();
 
     if (trimmed.startsWith('magnet:?')) {
-        return trimmed;
+        return appendTrackersToMagnet(trimmed);
     }
 
     try {
@@ -54,7 +65,8 @@ async function resolveTorrentSource(inputUrl) {
                 const html = pageRes.data;
                 const magnetMatches = html.match(/href="(magnet:\?[^"]+)"/g);
                 if (magnetMatches && magnetMatches.length > 0) {
-                    return magnetMatches[0].replace('href="', '').replace('"', '');
+                    const rawMagnet = magnetMatches[0].replace('href="', '').replace('"', '');
+                    return appendTrackersToMagnet(rawMagnet);
                 }
                 const torrentMatches = html.match(/href="(https:\/\/[^"]+\.torrent)"/g);
                 if (torrentMatches && torrentMatches.length > 0) {
@@ -87,12 +99,16 @@ app.post('/api/convert', async (req, res) => {
 
         const engine = torrentStream(torrentSource, {
             path: path.join(__dirname, 'downloads'),
-            port: 6881,
             trackers: YTS_TRACKERS,
-            connections: 300,
-            uploads: 0,
+            connections: 400,
+            uploads: 20,
             verify: false,
             dht: true
+        });
+
+        // Start listening to accept incoming peer connections and register port with trackers/DHT
+        engine.listen(0, (err) => {
+            if (!err) console.log(`Torrent swarm listening on port ${engine.port}`);
         });
 
         let isResolved = false;
