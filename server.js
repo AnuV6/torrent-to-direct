@@ -87,8 +87,9 @@ app.post('/api/convert', async (req, res) => {
 
         const engine = torrentStream(torrentSource, {
             path: path.join(__dirname, 'downloads'),
+            port: 6881,
             trackers: YTS_TRACKERS,
-            connections: 250,
+            connections: 300,
             uploads: 0,
             verify: false,
             dht: true
@@ -127,7 +128,7 @@ app.post('/api/convert', async (req, res) => {
                 };
             });
 
-            // Focus speed on the main movie file (largest file size)
+            // Select largest video file
             const largestFileIndex = filesMeta.reduce((maxIdx, f, idx, arr) => f.length > arr[maxIdx].length ? idx : maxIdx, 0);
             engine.files.forEach((f, idx) => {
                 if (idx === largestFileIndex) {
@@ -228,7 +229,7 @@ app.get('/api/stream/:infoHash/:fileIndex', (req, res) => {
 
     res.writeHead(206, {
         'Content-Range': `bytes ${start}-${end}/${file.length}`,
-        'Accept-Ranges': 'bytes',
+        'Accept-Ranges', 'bytes',
         'Content-Length': chunksize,
         'Content-Type': getContentType(file.name),
     });
