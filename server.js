@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const activeTorrents = new Map();
 
-// Top YTS and public trackers for high speed peer discovery
+// Optimized high-speed YTS & global tracker list
 const YTS_TRACKERS = [
     'udp://open.demonii.com:1337/announce',
     'udp://tracker.openbittorrent.com:80',
@@ -28,7 +28,10 @@ const YTS_TRACKERS = [
     'udp://open.stealth.si:80/announce',
     'udp://tracker.torrent.eu.org:451/announce',
     'udp://explodie.org:6969/announce',
-    'udp://ipv4.tracker.harry.lu:80/announce'
+    'udp://ipv4.tracker.harry.lu:80/announce',
+    'udp://tracker.tiny-vps.com:6969/announce',
+    'udp://thetracker.org:80/announce',
+    'udp://open.acgnxtracker.com:80/announce'
 ];
 
 // Helper to resolve YTS links to torrent/magnet
@@ -85,8 +88,10 @@ app.post('/api/convert', async (req, res) => {
         const engine = torrentStream(torrentSource, {
             path: path.join(__dirname, 'downloads'),
             trackers: YTS_TRACKERS,
-            connections: 100,
-            uploads: 0
+            connections: 250,
+            uploads: 0,
+            verify: false,
+            dht: true
         });
 
         let isResolved = false;
@@ -122,7 +127,7 @@ app.post('/api/convert', async (req, res) => {
                 };
             });
 
-            // Focus on main video file by default (largest file)
+            // Focus speed on the main movie file (largest file size)
             const largestFileIndex = filesMeta.reduce((maxIdx, f, idx, arr) => f.length > arr[maxIdx].length ? idx : maxIdx, 0);
             engine.files.forEach((f, idx) => {
                 if (idx === largestFileIndex) {
@@ -201,7 +206,6 @@ app.get('/api/stream/:infoHash/:fileIndex', (req, res) => {
     const file = t.engine.files[fileIndex];
     if (!file) return res.status(404).send('File not found');
 
-    // Deselect other files to concentrate bandwidth
     t.engine.files.forEach((f, idx) => {
         if (idx === fileIndex) f.select();
         else f.deselect();
@@ -243,7 +247,6 @@ app.get('/api/download/:infoHash/:fileIndex', (req, res) => {
     const file = t.engine.files[fileIndex];
     if (!file) return res.status(404).send('File not found');
 
-    // Focus bandwidth on this requested file
     t.engine.files.forEach((f, idx) => {
         if (idx === fileIndex) f.select();
         else f.deselect();
