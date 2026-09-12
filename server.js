@@ -229,7 +229,7 @@ app.get('/api/stream/:infoHash/:fileIndex', (req, res) => {
 
     res.writeHead(206, {
         'Content-Range': `bytes ${start}-${end}/${file.length}`,
-        'Accept-Ranges', 'bytes',
+        'Accept-Ranges': 'bytes',
         'Content-Length': chunksize,
         'Content-Type': getContentType(file.name),
     });
